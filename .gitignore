@@ -1,0 +1,11 @@
+.idea/
+__pycache__/*
+*.pyc
+checkpoint/*
+tensorboard/*
+data/raw-data/*
+data/datasets/*
+data/vocab/*
+data/tfrecords/*
+freeze-graph-data/*
+saved-model-pb-data/*

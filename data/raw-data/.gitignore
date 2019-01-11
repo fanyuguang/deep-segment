@@ -1,0 +1,5 @@
+*
+!.gitignore
+!data_demo.txt
+!embedding_vectors.txt
+!specific_symbols.txt
