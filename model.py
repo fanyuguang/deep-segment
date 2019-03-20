@@ -1,11 +1,20 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import os
 import tensorflow as tf
 import tensorflow.contrib.crf as crf
 from config import FLAGS
+from tensorflow_utils import TensorflowUtils
 
 
-class NerModel(object):
+class SequenceLabelingModel(object):
 
     def __init__(self):
+        self.raw_data_path = FLAGS.raw_data_path
+        self.vocab_path = FLAGS.vocab_path
+
+        self.use_stored_embedding = FLAGS.use_stored_embedding
         self.use_lstm = FLAGS.use_lstm
         self.use_dynamic_rnn = FLAGS.use_dynamic_rnn
         self.use_bidirectional_rnn = FLAGS.use_bidirectional_rnn
@@ -18,10 +27,12 @@ class NerModel(object):
         self.hidden_size = FLAGS.hidden_size
         self.keep_prob = FLAGS.keep_prob
 
+        self.tensorflow_utils = TensorflowUtils()
+
 
     def inference(self, inputs, inputs_sequence_length, num_classes, is_training):
         """
-        bilstm + crf model
+        Bilstm + crf model
         :param inputs:
         :param inputs_sequence_length:
         :param num_classes:
@@ -29,8 +40,12 @@ class NerModel(object):
         :return:
         """
         with tf.device('/cpu:0'):
-            embedding = tf.get_variable('embedding', [self.vocab_size, self.embedding_size],
-                                        initializer=tf.random_uniform_initializer(), dtype=tf.float32)
+            if self.use_stored_embedding:
+                embedding = self.tensorflow_utils.load_embedding(os.path.join(self.raw_data_path, 'char_embedding.txt'),
+                                                                 os.path.join(self.vocab_path, 'words_vocab.txt'))
+            else:
+                embedding = tf.get_variable('embedding', [self.vocab_size, self.embedding_size],
+                                            initializer=tf.random_uniform_initializer(), dtype=tf.float32)
             inputs_embedding = tf.nn.embedding_lookup(embedding, inputs)
         if is_training and self.keep_prob < 1:
             inputs_embedding = tf.nn.dropout(inputs_embedding, self.keep_prob)
@@ -86,7 +101,7 @@ class NerModel(object):
 
     def accuracy(self, logits, labels):
         """
-        computer the accuracy of rnn model
+        Computer the accuracy of rnn model
         :param logits:
         :param labels:
         :return:
@@ -100,7 +115,7 @@ class NerModel(object):
 
     def slice_seq(self, logits, labels, sequence_lengths):
         """
-        slice sequence, used by accuracy method
+        Slice sequence, used by accuracy method
         :param logits:
         :param labels:
         :param words_len:
@@ -135,7 +150,7 @@ class NerModel(object):
 
     def crf_accuracy(self, logits, labels, sequence_length, transition_params, num_classes):
         """
-        computer the accuracy of rnn + crf model
+        Computer the accuracy of rnn + crf model
         :param logits:
         :param labels:
         :param sequence_length:

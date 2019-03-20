@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import tensorflow as tf
 from config import FLAGS
 from data_utils import DataUtils
@@ -12,34 +15,17 @@ class TensorflowUtils(object):
         self.num_steps = FLAGS.num_steps
         self.min_after_dequeue = FLAGS.min_after_dequeue
         self.num_threads = FLAGS.num_threads
+        self.vocab_size = FLAGS.vocab_size
+        self.embedding_size = FLAGS.embedding_size
 
         self.data_utils = DataUtils()
-        self.default_word_padding_token = self.data_utils._START_VOCAB_ID[0]
-        self.default_label_padding_token = self.data_utils.load_default_label_token()
-
-
-    def load_embedding(self, vocab_filename, embedding_filename):
-        embedding_filename = 'data/raw-data/embedding_vectors.txt'
-        # embedding_dict = dict()
-        # with open(embedding_filename, encoding='utf-8', mode='rt') as data_file:
-        #     is_title = True
-        #     for line in data_file:
-        #         words = line.split()
-        #         if is_title:
-        #             word_count = int(words[0])
-        #             embedding_size = int(words[1])
-        #             is_tile = False
-        #         else:
-        #             word = words[0]
-        #             embedding = [float(num) for num in words[1:]]
-        #             if len(embedding) != embedding_size:
-        #                 raise Exception('The content of file : %s is error' %(embedding_filename))
-        #             embedding_matrix.append(embedding)
+        self.default_word_padding_id = self.data_utils._START_VOCAB_ID[0]
+        self.default_label_padding_id = self.data_utils.load_default_label_id()
 
 
     def create_record(self, words_list, labels_list, tfrecords_filename):
         """
-        store data into tfrecords file
+        Store data into tfrecords file
         :param words_list:
         :param labels_list:
         :param tfrecords_filename:
@@ -62,7 +48,7 @@ class TensorflowUtils(object):
 
     def read_and_decode(self, tfrecords_filename):
         """
-        shuffled read batch data from tfrecords file
+        Shuffled read batch data from tfrecords file
         :param tfrecords_filename:
         :return:
         """
@@ -80,10 +66,10 @@ class TensorflowUtils(object):
         words_len = words.dense_shape[0]
         words_len = tf.minimum(words_len, tf.constant(self.num_steps, tf.int64))
         words = tf.sparse_to_dense(sparse_indices=words.indices[: self.num_steps], output_shape=[self.num_steps],
-                                   sparse_values=words.values[: self.num_steps], default_value=self.default_word_padding_token)
+                                   sparse_values=words.values[: self.num_steps], default_value=self.default_word_padding_id)
         labels = features['labels']
         labels = tf.sparse_to_dense(sparse_indices=labels.indices[: self.num_steps], output_shape=[self.num_steps],
-                                    sparse_values=labels.values[: self.num_steps], default_value=self.default_label_padding_token)
+                                    sparse_values=labels.values[: self.num_steps], default_value=self.default_label_padding_id)
         capacity = self.min_after_dequeue + 3 * self.batch_size
         words_batch, labels_batch, words_len_batch = tf.train.shuffle_batch([words, labels, words_len],
                                                                             batch_size=self.batch_size, capacity=capacity,
@@ -94,7 +80,7 @@ class TensorflowUtils(object):
 
     def print_all(self, tfrecords_filename):
         """
-        print all data from tfrecords file
+        Print all data from tfrecords file
         :param tfrecords_filename:
         :return:
         """
@@ -112,7 +98,7 @@ class TensorflowUtils(object):
 
     def print_shuffle(self, tfrecords_filename):
         """
-        print shuffled data from tfrecords file calling read_and_decode method
+        Print shuffled data from tfrecords file calling read_and_decode method
         :param tfrecords_filename:
         :return:
         """
@@ -138,9 +124,36 @@ class TensorflowUtils(object):
             coord.join(threads)
 
 
+    def load_embedding(self, embedding_filename, vocab_filename):
+        """
+        Load word embedding, that pretrained by Word2Vec
+        :param embedding_filename:
+        :param vocab_filename:
+        :return:
+        """
+        embedding_dict = dict()
+        with open(embedding_filename, encoding='utf-8', mode='rt') as data_file:
+            for line in data_file:
+                words = line.strip().split()
+                if len(words) != self.embedding_size + 1:
+                    raise Exception('Invalid embedding exist : %s' % (line.strip()))
+                word = words[0]
+                embedding = [float(num) for num in words[1:]]
+                embedding_dict[word] = embedding
+
+        words_vocab = self.data_utils.initialize_single_vocabulary(vocab_filename)
+
+        embedding = [[0.0 for _ in range(self.embedding_size)] for _ in range(self.vocab_size)]
+        for word, word_ids in words_vocab.items():
+            if word in embedding_dict:
+                embedding[word_ids] = embedding_dict[word]
+        embedding_tensor = tf.constant(embedding, dtype=tf.float32, name='embedding')
+        return embedding_tensor
+
+
     def sparse_concat(self, sparse_tensor_input, base_tensor, excess_tensor, default_value):
         """
-        extend sparse_tensor_input using base_indices and excess_indices
+        Extend sparse_tensor_input using base_indices and excess_indices
         :param sparse_tensor_input:
         :param base_indices:
         :param base_shape:
@@ -171,7 +184,7 @@ class TensorflowUtils(object):
 
     def sparse_string_join(self, sparse_tensor_input, name):
         """
-        join SparseTensor to 1-D String dense Tensor
+        Join SparseTensor to 1-D String dense Tensor
         :param sparse_tensor_input:
         :param name:
         :return:
@@ -183,3 +196,14 @@ class TensorflowUtils(object):
         dense_tensor_input_join = tf.reduce_join(dense_tensor_input, axis=1, separator=' ')
         format_predict_labels = tf.string_strip(dense_tensor_input_join, name=name)
         return format_predict_labels
+
+
+    def score_normalize(self, scores):
+        """
+        Normalize crf score
+        :param scores: shape [-1, 1]
+        :return:
+        """
+        lambda_factor = tf.constant(0.05, dtype=tf.float32)
+        normalized_scores = tf.reciprocal(tf.add(tf.constant(1.0, dtype=tf.float32), tf.exp(tf.negative(tf.multiply(lambda_factor, scores)))))
+        return normalized_scores

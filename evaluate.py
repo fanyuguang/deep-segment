@@ -1,5 +1,9 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import os
 import tensorflow as tf
+
 from config import FLAGS
 from data_utils import DataUtils
 
@@ -12,7 +16,7 @@ class NerEvaluate(object):
 
     def evaluate(self, data_filename):
         """
-        evaluate the score of model predict, data_filename is created by file_predict
+        Evaluate the score of model predict, data_filename is created by file_predict
         :return:
         """
         print('Evaluate file ' + data_filename)
@@ -47,7 +51,7 @@ class NerEvaluate(object):
 
     def single_word_file_evaluate(self, data_filename):
         """
-        evaluate the score of model predict, data_filename is created by single_word_file_predict
+        Evaluate the score of model predict, data_filename is created by single_word_file_predict
         :return:
         """
         print('Evaluate file ' + data_filename)

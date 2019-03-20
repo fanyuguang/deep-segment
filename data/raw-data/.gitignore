@@ -1,7 +1,7 @@
 *
 !.gitignore
 !data_demo.txt
-!embedding_vectors.txt
 !specific_symbols.txt
 !base_dict.txt
 !extract_dict.txt
+!char_embedding.txt

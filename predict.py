@@ -1,15 +1,19 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import os
 import shutil
 import tensorflow as tf
-from tensorflow.contrib import lookup
 import tensorflow.contrib.crf as crf
+
+from tensorflow.contrib import lookup
 from config import FLAGS
 from data_utils import DataUtils
 from tensorflow_utils import TensorflowUtils
-from model import NerModel
+from model import SequenceLabelingModel
 
 
-class NerPredict(object):
+class Predict(object):
 
     def __init__(self):
         self.vocab_path = FLAGS.vocab_path
@@ -26,7 +30,7 @@ class NerPredict(object):
         self.data_utils = DataUtils()
         self.tensorflow_utils = TensorflowUtils()
         self.num_classes = self.data_utils.load_num_classes()
-        self.ner_model = NerModel()
+        self.sequence_labeling_model = SequenceLabelingModel()
         self.init_predict_graph()
 
 
@@ -61,7 +65,7 @@ class NerPredict(object):
                                    sparse_values=valid_sparse_words.values,
                                    default_value=default_padding_word)
 
-        # dict words to token ids
+        # dict words to ids
         with open(os.path.join(self.vocab_path, 'words_vocab.txt'), encoding='utf-8', mode='rt') as data_file:
             words_table_list = [line.strip() for line in data_file if line.strip()]
         words_table_tensor = tf.constant(words_table_list, dtype=tf.string)
@@ -71,7 +75,7 @@ class NerPredict(object):
 
         # blstm model predict
         with tf.variable_scope('model', reuse=None):
-            logits = self.ner_model.inference(words_ids, input_sentences_lengths, self.num_classes, is_training=False)
+            logits = self.sequence_labeling_model.inference(words_ids, input_sentences_lengths, self.num_classes, is_training=False)
 
         if self.use_crf:
             logits = tf.reshape(logits, shape=[-1, self.num_steps, self.num_classes])
@@ -80,7 +84,8 @@ class NerPredict(object):
             predict_labels_ids, sequence_scores = crf.crf_decode(logits, transition_params, input_sentences_lengths)
             predict_labels_ids = tf.to_int64(predict_labels_ids)
             sequence_scores = tf.reshape(sequence_scores, shape=[-1, 1])
-            predict_scores = tf.matmul(sequence_scores, tf.ones(shape=[1, self.num_steps], dtype=tf.float32))
+            normalized_sequence_scores = self.tensorflow_utils.score_normalize(sequence_scores)
+            predict_scores = tf.matmul(normalized_sequence_scores, tf.ones(shape=[1, self.num_steps], dtype=tf.float32))
         else:
             props = tf.nn.softmax(logits)
             max_prop_values, max_prop_indices = tf.nn.top_k(props, k=1)
@@ -89,7 +94,7 @@ class NerPredict(object):
             predict_scores = tf.reshape(max_prop_values, shape=[-1, self.num_steps])
         predict_scores = tf.as_string(predict_scores, precision=3)
 
-        # dict token ids to labels
+        # dict ids to labels
         with open(os.path.join(self.vocab_path, 'labels_vocab.txt'), encoding='utf-8', mode='rt') as data_file:
             labels_table_list = [line.strip() for line in data_file if line.strip()]
         labels_table_tensor = tf.constant(labels_table_list, dtype=tf.string)
@@ -119,8 +124,8 @@ class NerPredict(object):
 
     def predict(self, words_list):
         """
-        predict labels, the operation of transfer words to id token is processed by tensorflow tensor
-        input words list, now, only support one element list
+        Predict labels, the operation of transfer words to ids is processed by tensorflow tensor
+        Input words list
         :param words_list:
         :return:
         """
@@ -148,38 +153,94 @@ class NerPredict(object):
 
     def file_predict(self, data_filename, predict_filename):
         """
-        predict data_filename, save the predict result into predict_filename
-        the label is split into single word, -B -M -E -S
+        Predict data_filename, save the predict result into predict_filename
+        :param data_filename:
+        :param predict_filename:
+        :return:
+        """
+        print('Predict file ' + data_filename)
+        words_list = []
+        labels_list = []
+        predict_labels_list = []
+        with open(data_filename, encoding='utf-8', mode='rt') as data_file:
+            for line in data_file:
+                words, labels = self.data_utils.split(line)
+                if words and labels:
+                    words_list.append(' '.join(words))
+                    labels_list.append(' '.join(labels))
+                    predict_labels, _ = self.predict([' '.join(words)])
+                    predict_labels_list.append(predict_labels[0])
+        with open(predict_filename, encoding='utf-8', mode='wt') as predict_file:
+            for (words, labels, predict_labels) in zip(words_list, labels_list, predict_labels_list):
+                predict_file.write('Passage: ' + words + '\n')
+                predict_file.write('Label: ' + labels + '\n')
+                predict_file.write('PredictLabel: ' + predict_labels + '\n\n')
+
+
+    def single_word_file_predict(self, data_filename, predict_filename):
+        """
+        Predict data_filename, save the predict result into predict_filename
+        The label is split into single word, -B -M -E -S
         :param data_filename:
         :param predict_filename:
         :return:
         """
         print('Predict file ' + data_filename)
         sentence_list = []
+        words_list = []
+        labels_list = []
+        predict_labels_list = []
         with open(data_filename, encoding='utf-8', mode='rt') as data_file:
             for line in data_file:
-                line = ''.join(line.strip().split())
-                if line:
-                    words = [char for char in line]
+                words, labels = self.data_utils.split(line)
+                if words and labels:
+                    sentence_list.append(''.join(words))
+                    words_list.append(' '.join(words))
+                    labels_list.append(' '.join(labels))
                     predict_labels, _ = self.predict([' '.join(words)])
-                    predict_labels = predict_labels[0].split()
-                    merge_word_list, _ = self.data_utils.merge_label(words, predict_labels)
-                    sentence_list.append(' '.join(merge_word_list))
-                else:
-                    sentence_list.append('')
+                    predict_labels_list.append(predict_labels[0])
+        word_predict_label_list = []
+        word_category_list = []
+        word_predict_category_list = []
+        for (words, labels, predict_labels) in zip(words_list, labels_list, predict_labels_list):
+            word_list = words.split()
+            label_list = labels.split()
+            predict_label_list = predict_labels.split()
+            word_predict_label = ' '.join([word + '/' + predict_label for (word, predict_label) in zip(word_list, predict_label_list)])
+            word_predict_label_list.append(word_predict_label)
+            # merge label
+            merge_word_list, merge_label_list = self.data_utils.merge_label(word_list, label_list)
+            word_category = ' '.join([word + '/' + label for (word, label) in zip(merge_word_list, merge_label_list) if label != self.default_label])
+            word_category_list.append(word_category)
+            # merge predict label
+            merge_predict_word_list, merge_predict_label_list = self.data_utils.merge_label(word_list, predict_label_list)
+            word_predict_category = ' '.join([predict_word + '/' + predict_label for (predict_word, predict_label) in
+                                              zip(merge_predict_word_list, merge_predict_label_list) if predict_label != 'O'])
+            word_predict_category_list.append(word_predict_category)
         with open(predict_filename, encoding='utf-8', mode='wt') as predict_file:
-            for sentence in sentence_list:
-                predict_file.write(sentence + '\n')
+            for (sentence, word_predict_label, word_category, word_predict_category) in \
+                    zip(sentence_list, word_predict_label_list, word_category_list, word_predict_category_list):
+                predict_file.write('Passage: ' + sentence + '\n')
+                predict_file.write('SinglePredict: ' + word_predict_label + '\n')
+                predict_file.write('Merge: ' + word_category + '\n')
+                predict_file.write('MergePredict: ' + word_predict_category + '\n\n')
 
 
     def freeze_graph(self):
-        # save graph into .pb file
+        """
+        Save graph into .pb file
+        :return:
+        """
         graph = tf.graph_util.convert_variables_to_constants(self.sess, self.sess.graph_def, ['init_all_tables', 'predict_labels', 'predict_scores'])
         tf.train.write_graph(graph, self.freeze_graph_path, 'frozen_graph.pb', as_text=False)
+        print('Successfully freeze model to %s' % self.freeze_graph_path)
 
 
     def saved_model_pb(self):
-        # for tensorflow serving, saved model into .ph and variables files
+        """
+        Saved model into .ph and variables files, loading it by tensorflow serving,
+        :return:
+        """
         saved_model_path = os.path.join(self.saved_model_path, '1')
         if os.path.exists(saved_model_path):
             shutil.rmtree(saved_model_path)
@@ -195,7 +256,7 @@ class NerPredict(object):
         legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
         builder.add_meta_graph_and_variables(
             self.sess, [tf.saved_model.tag_constants.SERVING],
-            signature_def_map={'predict_ner': prediction_signature},
+            signature_def_map={'predict_segment': prediction_signature},
             legacy_init_op=legacy_init_op
         )
         builder.save()
@@ -203,18 +264,23 @@ class NerPredict(object):
 
 
 def main(_):
-    ner_predict = NerPredict()
+    predict = Predict()
 
-    sentence = '空间绝对够用，对于我这1.68米的个子就算1.80米 大个也绝对够用。后排座椅，也绝对够宽敞。拉4个都不算太挤'
-    words = [char for char in ''.join(sentence.split())]
-    predict_labels, predict_scores = ner_predict.predict([' '.join(words)])
+    sentence = '张伟在6月16号会去一趟丹棱街中国移动营业厅'
+    sentence = ''.join(sentence.split())
+    words = ' '.join([char for char in sentence])
+    predict_labels, predict_scores = predict.predict([words, '你 好'])
+    print(predict_labels)
+    print(predict_scores)
 
-    data_utils = DataUtils()
-    merge_word_list, _ = data_utils.merge_label(words, predict_labels[0].split())
-    print(' '.join(merge_word_list))
+    predict.freeze_graph()
+    predict.saved_model_pb()
 
-    ner_predict.file_predict(os.path.join(FLAGS.datasets_path, 'saic_gm_segmentation_20181122_random_sample_1000.tsv'),
-                             os.path.join(FLAGS.datasets_path, 'saic_gm_segmentation_20181122_random_sample_1000_predict.tsv'))
+    # file predict
+    # ner_predict.file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
+
+    # file predict, and the label is split into single word
+    # ner_predict.single_word_file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
 
 
 if __name__ == '__main__':
