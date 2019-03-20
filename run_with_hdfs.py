@@ -9,7 +9,7 @@ from config import FLAGS
 from data_utils import DataUtils
 from tensorflow_utils import TensorflowUtils
 from train import Train
-from predict import NerPredict
+from predict import Predict
 from hdfs3 import HDFileSystem
 from shutil import copytree
 
@@ -86,33 +86,20 @@ def hdfs_upload(local_path, hdfs_path):
 
 
 def main():
-    input_path = os.path.join(FLAGS.input_path, 'data.txt')
-    if FLAGS.hdfs_host:
-        docker_inner_path = os.path.join(FLAGS.raw_data_path, 'data.txt')
-        hdfs_download(os.path.join(FLAGS.input_path, 'data.txt'), docker_inner_path)
-    else:
-        docker_inner_path = os.path.join('/tmp/', input_path)
-        print('Download file from ' + docker_inner_path)
-
+    hdfs_download(os.path.join(FLAGS.input_path, 'data.txt'), os.path.join(FLAGS.raw_data_path, 'data.txt'))
     data_utils = DataUtils()
-    # format datasets
-    data_utils.format_data(docker_inner_path, os.path.join(FLAGS.raw_data_path, 'format_data.txt'))
-    if FLAGS.use_char_based:
-        data_utils.split_label_file(os.path.join(FLAGS.raw_data_path, 'format_data.txt'),
-                                    os.path.join(FLAGS.raw_data_path, 'split_data.txt'))
-
     # datasets process
-    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'split_data.txt'), FLAGS.train_percent,
+    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.train_percent,
                                 FLAGS.val_percent, FLAGS.datasets_path)
     words_vocab, labels_vocab, _ = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'train.txt'),
                                                                 FLAGS.vocab_path, FLAGS.vocab_size)
 
-    train_word_ids_list, train_label_ids_list = data_utils.data_to_token_ids(
+    train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(
         os.path.join(FLAGS.datasets_path, 'train.txt'), words_vocab, labels_vocab)
-    validation_word_ids_list, validation_label_ids_list = data_utils.data_to_token_ids(
+    validation_word_ids_list, validation_label_ids_list = data_utils.file_to_word_ids(
         os.path.join(FLAGS.datasets_path, 'validation.txt'), words_vocab, labels_vocab)
-    test_word_ids_list, test_label_ids_list = data_utils.data_to_token_ids(
-        os.path.join(FLAGS.datasets_path, 'test.txt'), words_vocab, labels_vocab)
+    test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'test.txt'),
+                                                                          words_vocab, labels_vocab)
 
     tensorflow_utils = TensorflowUtils()
 
@@ -123,34 +110,22 @@ def main():
     tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list,
                                    os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
 
-    ner_train = Train()
-    ner_train.train()
+    segment_train = Train()
+    segment_train.train()
 
     with tf.variable_scope(tf.get_variable_scope(), reuse=True):
-        ner_predict = NerPredict()
+        predict = Predict()
 
         sentence = '张伟在6月16号会去一趟丹棱街中国移动营业厅'
         words = ' '.join([char for char in sentence])
-        predict_labels, predict_scores = ner_predict.predict([words])
+        predict_labels, predict_scores = predict.predict([words])
         print(predict_labels)
         print(predict_scores)
 
-        ner_predict.saved_model_pb()
+        predict.saved_model_pb()
 
-    if FLAGS.hdfs_host:
-        hdfs_upload(FLAGS.tensorboard_path, os.path.join(FLAGS.output_path, 'tensorboard'))
-        hdfs_upload(FLAGS.saved_model_path, os.path.join(FLAGS.output_path, 'saved-model-data'))
-    else:
-        export_tensorboard_path = os.path.join('/tmp', FLAGS.output_path, 'tensorboard')
-        export_model_path = os.path.join('/tmp', FLAGS.output_path, 'saved-model-data')
-        print('Upload tensorboard file to ' + export_tensorboard_path)
-        print('Upload model file to ' + export_model_path)
-        if os.path.exists(export_tensorboard_path):
-            shutil.rmtree(export_tensorboard_path)
-        if os.path.exists(export_model_path):
-            shutil.rmtree(export_model_path)
-        copytree(FLAGS.tensorboard_path, export_tensorboard_path)
-        copytree(FLAGS.saved_model_pb_path, export_model_path)
+    hdfs_upload(FLAGS.tensorboard_path, os.path.join(FLAGS.output_path, 'tensorboard'))
+    hdfs_upload(FLAGS.saved_model_path, os.path.join(FLAGS.output_path, 'saved-model-data'))
 
 
 if __name__ == '__main__':
