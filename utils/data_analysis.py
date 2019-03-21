@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from data_utils import DataUtils
+from utils.data_utils import DataUtils
 
 
 class DataAnalysis(object):

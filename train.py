@@ -7,8 +7,8 @@ import pytz
 import tensorflow as tf
 
 from config import FLAGS
-from data_utils import DataUtils
-from tensorflow_utils import TensorflowUtils
+from utils.data_utils import DataUtils
+from utils.tensorflow_utils import TensorflowUtils
 from model import SequenceLabelingModel
 
 

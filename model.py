@@ -5,7 +5,7 @@ import os
 import tensorflow as tf
 import tensorflow.contrib.crf as crf
 from config import FLAGS
-from tensorflow_utils import TensorflowUtils
+from utils.tensorflow_utils import TensorflowUtils
 
 
 class SequenceLabelingModel(object):

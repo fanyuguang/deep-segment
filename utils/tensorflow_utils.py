@@ -3,7 +3,7 @@
 
 import tensorflow as tf
 from config import FLAGS
-from data_utils import DataUtils
+from utils.data_utils import DataUtils
 
 
 class TensorflowUtils(object):

@@ -8,8 +8,8 @@ import tensorflow.contrib.crf as crf
 
 from tensorflow.contrib import lookup
 from config import FLAGS
-from data_utils import DataUtils
-from tensorflow_utils import TensorflowUtils
+from utils.data_utils import DataUtils
+from utils.tensorflow_utils import TensorflowUtils
 from model import SequenceLabelingModel
 
 
