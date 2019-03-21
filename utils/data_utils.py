@@ -4,6 +4,7 @@
 import os
 import re
 import random
+
 from config import FLAGS
 
 
@@ -95,8 +96,6 @@ class DataUtils(object):
                             word_label_list.append(word + '/' + label)
                     if word_label_list:
                         format_data_list.append('||'.join(word_label_list))
-
-        # random.shuffle(format_data_list)
 
         with open(format_data_filename, encoding='utf-8', mode='wt') as format_data_file:
             for data in format_data_list:
@@ -209,7 +208,7 @@ class DataUtils(object):
         return merge_word_list, merge_label_list
 
 
-    def prepare_datasets(self, raw_data_filename, train_percent, val_percent, datasets_path):
+    def prepare_datasets(self, raw_data_filename, datasets_path, test_percent):
         """
         Split dataset to train set, validation set, test set
         Store sets into datasets dir
@@ -226,17 +225,13 @@ class DataUtils(object):
                 line = line.strip('\n')
                 if line:
                     data_list.append(line)
-
+        random.shuffle(data_list)
         data_size = len(data_list)
-        train_validation_index = int(data_size * train_percent)
-        validation_test_index = int(data_size * (train_percent + val_percent))
+        test_end_index = int(data_size * test_percent)
 
-        train_data_list = data_list[:train_validation_index]
-        validation_data_list = data_list[train_validation_index:validation_test_index]
-        test_data_list = data_list[validation_test_index:]
-
+        train_data_list = data_list[test_end_index:]
+        test_data_list = data_list[:test_end_index:]
         self.list_to_file(train_data_list, os.path.join(datasets_path, 'train.txt'))
-        self.list_to_file(validation_data_list, os.path.join(datasets_path, 'validation.txt'))
         self.list_to_file(test_data_list, os.path.join(datasets_path, 'test.txt'))
 
 

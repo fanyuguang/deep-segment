@@ -154,32 +154,6 @@ class Predict(object):
     def file_predict(self, data_filename, predict_filename):
         """
         Predict data_filename, save the predict result into predict_filename
-        :param data_filename:
-        :param predict_filename:
-        :return:
-        """
-        print('Predict file ' + data_filename)
-        words_list = []
-        labels_list = []
-        predict_labels_list = []
-        with open(data_filename, encoding='utf-8', mode='rt') as data_file:
-            for line in data_file:
-                words, labels = self.data_utils.split(line)
-                if words and labels:
-                    words_list.append(' '.join(words))
-                    labels_list.append(' '.join(labels))
-                    predict_labels, _ = self.predict([' '.join(words)])
-                    predict_labels_list.append(predict_labels[0])
-        with open(predict_filename, encoding='utf-8', mode='wt') as predict_file:
-            for (words, labels, predict_labels) in zip(words_list, labels_list, predict_labels_list):
-                predict_file.write('Passage: ' + words + '\n')
-                predict_file.write('Label: ' + labels + '\n')
-                predict_file.write('PredictLabel: ' + predict_labels + '\n\n')
-
-
-    def single_word_file_predict(self, data_filename, predict_filename):
-        """
-        Predict data_filename, save the predict result into predict_filename
         The label is split into single word, -B -M -E -S
         :param data_filename:
         :param predict_filename:
@@ -266,21 +240,17 @@ class Predict(object):
 def main(_):
     predict = Predict()
 
-    sentence = '张伟在6月16号会去一趟丹棱街中国移动营业厅'
-    sentence = ''.join(sentence.split())
-    words = ' '.join([char for char in sentence])
-    predict_labels, predict_scores = predict.predict([words, '你 好'])
-    print(predict_labels)
-    print(predict_scores)
+    # sentence = '张伟在6月16号会去一趟丹棱街中国移动营业厅'
+    # sentence = ''.join(sentence.split())
+    # words = ' '.join([char for char in sentence])
+    # predict_labels, predict_scores = predict.predict([words, '你 好'])
+    # print(predict_labels)
+    # print(predict_scores)
+    #
+    # predict.freeze_graph()
+    # predict.saved_model_pb()
 
-    predict.freeze_graph()
-    predict.saved_model_pb()
-
-    # file predict
-    # ner_predict.file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
-
-    # file predict, and the label is split into single word
-    # ner_predict.single_word_file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
+    predict.file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
 
 
 if __name__ == '__main__':

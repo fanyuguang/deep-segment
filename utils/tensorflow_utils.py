@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import tensorflow as tf
+
 from config import FLAGS
 from utils.data_utils import DataUtils
 

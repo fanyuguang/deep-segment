@@ -28,7 +28,7 @@ class Train(object):
         self.max_training_step = FLAGS.max_training_step
 
         self.train_tfrecords_filename = os.path.join(self.tfrecords_path, 'train.tfrecords')
-        self.validate_tfrecords_filename = os.path.join(self.tfrecords_path, 'validate.tfrecords')
+        self.test_tfrecords_filename = os.path.join(self.tfrecords_path, 'test.tfrecords')
 
         self.data_utils = DataUtils()
         self.num_classes = self.data_utils.load_num_classes()
@@ -43,8 +43,8 @@ class Train(object):
         """
         train_data = self.tensorflow_utils.read_and_decode(self.train_tfrecords_filename)
         train_batch_features, train_batch_labels, train_batch_features_lengths = train_data
-        validate_data = self.tensorflow_utils.read_and_decode(self.validate_tfrecords_filename)
-        validate_batch_features, validate_batch_labels, validate_batch_features_lengths = validate_data
+        test_data = self.tensorflow_utils.read_and_decode(self.test_tfrecords_filename)
+        test_batch_features, test_batch_labels, test_batch_features_lengths = test_data
 
         with tf.device('/cpu:0'):
             global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -63,15 +63,15 @@ class Train(object):
             loss = self.sequence_labeling_model.loss(slice_logits, slice_train_batch_labels)
 
         with tf.variable_scope('model', reuse=True):
-            accuracy_logits = self.sequence_labeling_model.inference(validate_batch_features, validate_batch_features_lengths, self.num_classes, is_training=False)
-        validate_batch_labels = tf.to_int64(validate_batch_labels)
+            accuracy_logits = self.sequence_labeling_model.inference(test_batch_features, test_batch_features_lengths, self.num_classes, is_training=False)
+        test_batch_labels = tf.to_int64(test_batch_labels)
         if self.use_crf:
-            accuracy = self.sequence_labeling_model.crf_accuracy(accuracy_logits, validate_batch_labels, validate_batch_features_lengths,
+            accuracy = self.sequence_labeling_model.crf_accuracy(accuracy_logits, test_batch_labels, test_batch_features_lengths,
                                                    transition_params, self.num_classes)
         else:
-            slice_accuracy_logits, slice_validate_batch_labels = self.sequence_labeling_model.slice_seq(accuracy_logits, validate_batch_labels,
-                                                                                          validate_batch_features_lengths)
-            accuracy = self.sequence_labeling_model.accuracy(slice_accuracy_logits, slice_validate_batch_labels)
+            slice_accuracy_logits, slice_test_batch_labels = self.sequence_labeling_model.slice_seq(accuracy_logits, test_batch_labels,
+                                                                                          test_batch_features_lengths)
+            accuracy = self.sequence_labeling_model.accuracy(slice_accuracy_logits, slice_test_batch_labels)
 
         # summary
         tf.summary.scalar('loss', loss)
@@ -103,6 +103,8 @@ class Train(object):
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(coord=coord, sess=sess)
 
+            max_accuracy = 0.0
+            min_loss = 100000000.0
             try:
                 while not coord.should_stop():
                     _, loss_value, step = sess.run([train_op, loss, global_step])
@@ -111,10 +113,12 @@ class Train(object):
                         china_tz = pytz.timezone('Asia/Shanghai')
                         current_time = datetime.datetime.now(china_tz)
                         print('[{}] Step: {}, loss: {}, accuracy: {}, lr: {}'.format(current_time, step, loss_value, accuracy_value, lr_value))
-                        if step % 1000 == 0:
+                        if accuracy_value > max_accuracy and loss_value < min_loss:
                             writer.add_summary(summary_value, step)
                             saver.save(sess, checkpoint_filename, global_step=step)
                             print('save model to %s-%d' % (checkpoint_filename, step))
+                            max_accuracy = accuracy_value
+                            min_loss = loss_value
                     if step >= self.max_training_step:
                         print('Done training after %d step' % step)
                         break
@@ -134,17 +138,15 @@ def main(_):
         data_utils.split_label_file(os.path.join(FLAGS.raw_data_path, 'format_data.txt'), os.path.join(FLAGS.raw_data_path, 'split_data.txt'))
 
     # datasets process
-    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.train_percent, FLAGS.val_percent, FLAGS.datasets_path)
+    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.datasets_path, FLAGS.test_percent)
     words_vocab, labels_vocab, _ = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'train.txt'), FLAGS.vocab_path, FLAGS.vocab_size)
 
     train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'train.txt'), words_vocab, labels_vocab)
-    validation_word_ids_list, validation_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'validation.txt'), words_vocab, labels_vocab)
     test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'test.txt'), words_vocab, labels_vocab)
 
     tensorflow_utils = TensorflowUtils()
 
     tensorflow_utils.create_record(train_word_ids_list, train_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
-    tensorflow_utils.create_record(validation_word_ids_list, validation_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'validate.tfrecords'))
     tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
 
     tensorflow_utils.print_all(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))

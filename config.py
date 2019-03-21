@@ -18,8 +18,7 @@ tf.app.flags.DEFINE_string('saved_model_path', 'saved-model-data', 'Saved model 
 tf.app.flags.DEFINE_bool('use_char_based', True, 'if True, model is char-based, else segmentation word-based')
 tf.app.flags.DEFINE_string('default_label', 'WORD-S', 'define the default label in the label_vocab')
 tf.app.flags.DEFINE_integer('vocab_size', 1000, 'Vocab size')
-tf.app.flags.DEFINE_float('train_percent', 0.8, 'Train percent')
-tf.app.flags.DEFINE_float('val_percent', 0.1, 'The percent between test data and validation data')
+tf.app.flags.DEFINE_float('test_percent', 0.1, 'The percentage of test for all data')
 
 # batch data generator params
 tf.app.flags.DEFINE_integer('batch_size', 64, 'words batch size')

@@ -8,7 +8,7 @@ from config import FLAGS
 from utils.data_utils import DataUtils
 
 
-class NerEvaluate(object):
+class Evaluate(object):
 
     def __init__(self):
         self.data_utils = DataUtils()
@@ -17,41 +17,6 @@ class NerEvaluate(object):
     def evaluate(self, data_filename):
         """
         Evaluate the score of model predict, data_filename is created by file_predict
-        :return:
-        """
-        print('Evaluate file ' + data_filename)
-        label_count = dict()
-        with open(data_filename, encoding='utf-8', mode='rt') as data_file:
-            for line in data_file:
-                line = line.strip()
-                if line and line[:6] == 'Label:':
-                    labels = line.split()[1:]
-                if line and line[:13] == 'PredictLabel:':
-                    predict_labels = line.split()[1:]
-                    if labels and predict_labels:
-                        for label, predict_label in zip(labels, predict_labels):
-                            if label not in label_count:
-                                label_count[label] = [0] * 3
-                            if predict_label not in label_count:
-                                label_count[predict_label] = [0] * 3
-                            # index 0 is label, index 1 is predict label, index 2 is common label
-                            label_count[label][0] += 1
-                            label_count[predict_label][1] += 1
-                            if label == predict_label:
-                                label_count[label][2] += 1
-        min_num = 0.0000000000001
-        label_scores = dict()
-        for label, count in label_count.items():
-            precision_score = count[2] / (count[1] + min_num)
-            recall_score = count[2] / (count[0] + min_num)
-            f_score = precision_score * recall_score * 2 / (precision_score + recall_score + min_num)
-            label_scores[label] = [precision_score, recall_score, f_score]
-            print(label + ': [precision: ' + str(precision_score) + ', recall: ' + str(recall_score) + ', f_score: ' + str(f_score) + ']')
-
-
-    def single_word_file_evaluate(self, data_filename):
-        """
-        Evaluate the score of model predict, data_filename is created by single_word_file_predict
         :return:
         """
         print('Evaluate file ' + data_filename)
@@ -105,9 +70,8 @@ class NerEvaluate(object):
 
 
 def main(_):
-    ner_evaluate = NerEvaluate()
-    # ner_evaluate.evaluate(os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
-    ner_evaluate.single_word_file_evaluate(os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
+    evaluate = Evaluate()
+    evaluate.evaluate(os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
 
 
 if __name__ == '__main__':

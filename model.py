@@ -4,6 +4,7 @@
 import os
 import tensorflow as tf
 import tensorflow.contrib.crf as crf
+
 from config import FLAGS
 from utils.tensorflow_utils import TensorflowUtils
 
