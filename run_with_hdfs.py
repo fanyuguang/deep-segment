@@ -20,8 +20,8 @@ tf.app.flags.DEFINE_string('output_path', '/user/hadoop/data/output/', 'output d
 
 
 def main():
-    # hdfs_client = HdfsUtils(FLAGS.hdfs_host, FLAGS.hdfs_port, FLAGS.hdfs_user)
-    # hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'data.txt'), os.path.join(FLAGS.raw_data_path, 'data.txt'))
+    hdfs_client = HdfsUtils(FLAGS.hdfs_host, FLAGS.hdfs_port, FLAGS.hdfs_user)
+    hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'data.txt'), os.path.join(FLAGS.raw_data_path, 'data.txt'))
 
     data_utils = DataUtils()
     # datasets process
@@ -49,8 +49,8 @@ def main():
 
         predict.saved_model_pb()
 
-    # hdfs_client.hdfs_upload(FLAGS.tensorboard_path, os.path.join(FLAGS.output_path, 'tensorboard'))
-    # hdfs_client.hdfs_upload(FLAGS.saved_model_path, os.path.join(FLAGS.output_path, 'saved-model-data'))
+    hdfs_client.hdfs_upload(FLAGS.tensorboard_path, os.path.join(FLAGS.output_path, 'tensorboard'))
+    hdfs_client.hdfs_upload(FLAGS.saved_model_path, os.path.join(FLAGS.output_path, 'saved-model-data'))
 
 
 if __name__ == '__main__':
