@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 import tensorflow as tf
 
 from config import FLAGS
