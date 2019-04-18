@@ -308,8 +308,8 @@ class DataUtils(object):
         words_count, labels_count, label_words_vocab = self.count_vocabulary(data_filename)
         words_vocab = self.sort_vocabulary(words_count, os.path.join(vocab_path, 'words_vocab.txt'), vocab_size)
         labels_vocab = self.sort_vocabulary(labels_count, os.path.join(vocab_path, 'labels_vocab.txt'), vocab_size, using_start_vocab=False)
-        for labels, word_list in label_words_vocab.items():
-            self.list_to_file(word_list, os.path.join(vocab_path, (labels + '.txt')))
+        # for labels, word_list in label_words_vocab.items():
+        #     self.list_to_file(word_list, os.path.join(vocab_path, (labels + '.txt')))
         return words_vocab, labels_vocab, label_words_vocab
 
 

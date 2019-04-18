@@ -83,3 +83,16 @@ class HdfsUtils(object):
         else:
             raise Exception('parameters invalid')
         print('Done.')
+
+
+    def hdfs_delete(self, hdfs_path):
+        '''
+        Delete file or dir at hdfs
+        :param hdfs_path:
+        :param local_path:
+        :return:
+        '''
+        hdfs_path = os.path.normpath(hdfs_path)
+        if self.hdfs.exists(hdfs_path):
+            self.hdfs.rm(hdfs_path)
+        print('Done.')
