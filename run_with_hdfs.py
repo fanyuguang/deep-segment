@@ -27,6 +27,8 @@ def main():
     hdfs_client = HdfsUtils(FLAGS.hdfs_host, FLAGS.hdfs_port, FLAGS.hdfs_user)
     data_utils = DataUtils()
 
+    hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'config.json'), os.path.join(FLAGS.raw_data_path, 'config.json'))
+
     if FLAGS.train_evaluate_export == 'train':
         hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'train.txt'), os.path.join(FLAGS.raw_data_path, 'train.txt'))
         hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'evaluate.txt'), os.path.join(FLAGS.raw_data_path, 'evaluate.txt'))
