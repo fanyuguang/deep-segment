@@ -4,4 +4,5 @@
 !specific_symbols.txt
 !base_dict.txt
 !extract_dict.txt
-!char_embedding.txt
+!embedding.txt
+!config.json

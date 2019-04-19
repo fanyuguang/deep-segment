@@ -15,7 +15,6 @@ from model import SequenceLabelingModel
 class Train(object):
 
     def __init__(self):
-        self.vocab_path = FLAGS.vocab_path
         self.tfrecords_path = FLAGS.tfrecords_path
         self.checkpoint_path = FLAGS.checkpoint_path
         self.tensorboard_path = FLAGS.tensorboard_path
@@ -31,7 +30,7 @@ class Train(object):
         self.test_tfrecords_filename = os.path.join(self.tfrecords_path, 'test.tfrecords')
 
         self.data_utils = DataUtils()
-        self.num_classes = self.data_utils.load_num_classes()
+        self.num_classes = self.data_utils.get_vocabulary_size(os.path.join(FLAGS.vocab_path, 'labels_vocab.txt'))
         self.tensorflow_utils = TensorflowUtils()
         self.sequence_labeling_model = SequenceLabelingModel()
 
@@ -131,26 +130,26 @@ class Train(object):
 
 def main(_):
     data_utils = DataUtils()
+    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.test_percent,
+                                os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'test.txt'))
 
-    # format datasets
-    data_utils.format_data(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), os.path.join(FLAGS.raw_data_path, 'format_data.txt'))
-    if FLAGS.use_char_based:
-        data_utils.split_label_file(os.path.join(FLAGS.raw_data_path, 'format_data.txt'), os.path.join(FLAGS.raw_data_path, 'split_data.txt'))
+    data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'label_train.txt'))
+    data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'label_test.txt'))
 
-    # datasets process
-    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.datasets_path, FLAGS.test_percent)
-    words_vocab, labels_vocab, _ = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'train.txt'), FLAGS.vocab_path, FLAGS.vocab_size)
+    data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_train.txt'), os.path.join(FLAGS.datasets_path, 'split_train.txt'))
+    data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_test.txt'), os.path.join(FLAGS.datasets_path, 'split_test.txt'))
 
-    train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'train.txt'), words_vocab, labels_vocab)
-    test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'test.txt'), words_vocab, labels_vocab)
+    words_vocab, labels_vocab = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'split_train.txt'), FLAGS.vocab_path, FLAGS.vocab_drop_limit)
+
+    train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_train.txt'), words_vocab, labels_vocab)
+    test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_test.txt'), words_vocab, labels_vocab)
 
     tensorflow_utils = TensorflowUtils()
-
     tensorflow_utils.create_record(train_word_ids_list, train_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
     tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
 
     tensorflow_utils.print_all(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
-    # tensorflow_utils.print_shuffle(os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
+    # tensorflow_utils.print_shuffle(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
 
     segment_train = Train()
     segment_train.train()

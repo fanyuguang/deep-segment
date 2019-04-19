@@ -15,16 +15,15 @@ tf.app.flags.DEFINE_string('freeze_graph_path', 'freeze-graph-data', 'Frozen gra
 tf.app.flags.DEFINE_string('saved_model_path', 'saved-model-data', 'Saved model and variables directory, for tensorflow serving')
 
 # training data process params
-tf.app.flags.DEFINE_bool('use_char_based', True, 'if True, model is char-based, else segmentation word-based')
-tf.app.flags.DEFINE_string('default_label', 'WORD-S', 'define the default label in the label_vocab')
-tf.app.flags.DEFINE_integer('vocab_size', 1000, 'Vocab size')
-tf.app.flags.DEFINE_float('test_percent', 0.1, 'The percentage of test for all data')
+tf.app.flags.DEFINE_string('default_label', 'WORD-S', 'Define the default label in the label_vocab')
+tf.app.flags.DEFINE_integer('vocab_drop_limit', 1, 'Drop the words that frequency is less than or equal to limit')
+tf.app.flags.DEFINE_float('test_percent', 0.0, 'The percentage of test for all data')
 
 # batch data generator params
-tf.app.flags.DEFINE_integer('batch_size', 64, 'words batch size')
-tf.app.flags.DEFINE_integer('min_after_dequeue', 10000, 'min after dequeue')
-tf.app.flags.DEFINE_integer('num_threads', 1, 'read batch num threads')
-tf.app.flags.DEFINE_integer('num_steps', 200, 'num steps, equals the length of words')
+tf.app.flags.DEFINE_integer('batch_size', 64, 'Words batch size')
+tf.app.flags.DEFINE_integer('min_after_dequeue', 10000, 'Min after dequeue')
+tf.app.flags.DEFINE_integer('num_threads', 1, 'Read batch num threads')
+tf.app.flags.DEFINE_integer('num_steps', 200, 'Num steps, equals the length of words')
 
 # model params
 tf.app.flags.DEFINE_bool('use_stored_embedding', True, 'If True, using pretrained word embedding, else random initialize word embedding')
@@ -43,6 +42,6 @@ tf.app.flags.DEFINE_float('keep_prob', 0.5, 'Keep prob')
 tf.app.flags.DEFINE_float('clip_norm', 5.0, 'Clipping ratio')
 tf.app.flags.DEFINE_integer('max_training_step', 200000, 'Max training step')
 
-tf.app.flags.DEFINE_float('default_predict_score', 0.0, 'define the default label in the label_vocab')
+tf.app.flags.DEFINE_float('default_predict_score', 0.0, 'Define the default label in the label_vocab')
 
 FLAGS = tf.app.flags.FLAGS

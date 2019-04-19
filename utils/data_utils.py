@@ -148,6 +148,22 @@ class DataUtils(object):
                     new_data_file.write(sentence + '\n')
 
 
+    def label_segment_file(self, data_filename, label_data_filename):
+        """
+        Label of file for segment
+        :param data_filename:
+        :param split_data_filename:
+        :return:
+        """
+        print('Label file ' + data_filename)
+        with open(label_data_filename, encoding='utf-8', mode='wt') as new_data_file:
+            with open(data_filename, encoding='utf-8', mode='rt') as raw_data_file:
+                for line in raw_data_file:
+                    words = line.strip().split()
+                    sentence = '||'.join([word + '/WORD' for word in words if word])
+                    new_data_file.write(sentence + '\n')
+
+
     def merge_label(self, word_list, label_list):
         """
         Merge split label, example label-B label-M label-E label-S to label
@@ -208,7 +224,7 @@ class DataUtils(object):
         return merge_word_list, merge_label_list
 
 
-    def prepare_datasets(self, raw_data_filename, datasets_path, test_percent):
+    def prepare_datasets(self, raw_data_filename, test_percent, train_data_filename, test_data_filename):
         """
         Split dataset to train set, validation set, test set
         Store sets into datasets dir
@@ -231,8 +247,8 @@ class DataUtils(object):
 
         train_data_list = data_list[test_end_index:]
         test_data_list = data_list[:test_end_index:]
-        self.list_to_file(train_data_list, os.path.join(datasets_path, 'train.txt'))
-        self.list_to_file(test_data_list, os.path.join(datasets_path, 'test.txt'))
+        self.list_to_file(train_data_list, train_data_filename)
+        self.list_to_file(test_data_list, test_data_filename)
 
 
     def count_vocabulary(self, data_filename):
@@ -277,40 +293,35 @@ class DataUtils(object):
                     data_file.write(data + '\n')
 
 
-    def sort_vocabulary(self, vocab_count, vocab_filename, vocab_size, using_start_vocab=True):
+    def sort_vocabulary(self, vocab_count, vocab_filename, using_start_vocab=True):
         """
-        Sort vocab from word and word count, limit vocab size with vocab_size
+        Sort vocab from word and word count
         :param vocab_count:
         :param vocab_filename:
-        :param vocab_size:
         :return: sorted vocab
         """
         vocab_list = sorted(vocab_count, key=vocab_count.get, reverse=True)
         if using_start_vocab:
             vocab_list = self._START_VOCAB + vocab_list
-        if len(vocab_list) > vocab_size:
-            vocab_list = vocab_list[:vocab_size]
         self.list_to_file(vocab_list, vocab_filename)
         vocab = dict([(x, y) for (y, x) in enumerate(vocab_list)])
         return vocab
 
 
-    def create_vocabulary(self, data_filename, vocab_path, vocab_size):
+    def create_vocabulary(self, data_filename, vocab_path, vocab_drop_limit):
         """
         Count and create vocabulary of word and label
         Store vocabulary into vocab dir
         :param data_filename:
         :param vocab_path:
-        :param vocab_size:
         :return: word vocab, label vocab and word vocab per label
         """
         print('Creating vocabulary ' + data_filename)
-        words_count, labels_count, label_words_vocab = self.count_vocabulary(data_filename)
-        words_vocab = self.sort_vocabulary(words_count, os.path.join(vocab_path, 'words_vocab.txt'), vocab_size)
-        labels_vocab = self.sort_vocabulary(labels_count, os.path.join(vocab_path, 'labels_vocab.txt'), vocab_size, using_start_vocab=False)
-        # for labels, word_list in label_words_vocab.items():
-        #     self.list_to_file(word_list, os.path.join(vocab_path, (labels + '.txt')))
-        return words_vocab, labels_vocab, label_words_vocab
+        words_count, labels_count, _ = self.count_vocabulary(data_filename)
+        words_count = {k: v for k, v in words_count.items() if v > vocab_drop_limit}
+        words_vocab = self.sort_vocabulary(words_count, os.path.join(vocab_path, 'words_vocab.txt'))
+        labels_vocab = self.sort_vocabulary(labels_count, os.path.join(vocab_path, 'labels_vocab.txt'), using_start_vocab=False)
+        return words_vocab, labels_vocab
 
 
     def initialize_single_vocabulary(self, vocab_filename):
@@ -344,6 +355,15 @@ class DataUtils(object):
         return words_vocab, labels_vocab
 
 
+    def get_vocabulary_size(self, vocab_filename):
+        """
+        Load num classes from labels vocab
+        :return:
+        """
+        labels_vocab = self.initialize_single_vocabulary(vocab_filename)
+        return len(labels_vocab)
+
+
     def load_default_label_id(self):
         """
         Init default word value and label value for read_and_decode padding
@@ -355,15 +375,6 @@ class DataUtils(object):
         except:
             raise Exception('Can not find default_label : %s in labels vocab filename : ' % (self.default_label, labels_vocab))
         return default_label_id
-
-
-    def load_num_classes(self):
-        """
-        Load num classes from labels vocab
-        :return:
-        """
-        labels_vocab = self.initialize_single_vocabulary(os.path.join(self.vocab_path, 'labels_vocab.txt'))
-        return len(labels_vocab)
 
 
     def word_to_id(self, word_list, vocab, default_id):

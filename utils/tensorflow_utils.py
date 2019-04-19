@@ -10,13 +10,10 @@ from utils.data_utils import DataUtils
 class TensorflowUtils(object):
 
     def __init__(self):
-        self.vocab_path = FLAGS.vocab_path
-
         self.batch_size = FLAGS.batch_size
         self.num_steps = FLAGS.num_steps
         self.min_after_dequeue = FLAGS.min_after_dequeue
         self.num_threads = FLAGS.num_threads
-        self.vocab_size = FLAGS.vocab_size
         self.embedding_size = FLAGS.embedding_size
 
         self.data_utils = DataUtils()
@@ -25,7 +22,7 @@ class TensorflowUtils(object):
 
 
     def create_record(self, words_list, labels_list, tfrecords_filename):
-        """
+        """"
         Store data into tfrecords file
         :param words_list:
         :param labels_list:
@@ -48,7 +45,7 @@ class TensorflowUtils(object):
 
 
     def read_and_decode(self, tfrecords_filename):
-        """
+        """"
         Shuffled read batch data from tfrecords file
         :param tfrecords_filename:
         :return:
@@ -144,7 +141,7 @@ class TensorflowUtils(object):
 
         words_vocab = self.data_utils.initialize_single_vocabulary(vocab_filename)
 
-        embedding = [[0.0 for _ in range(self.embedding_size)] for _ in range(self.vocab_size)]
+        embedding = [[0.0 for _ in range(self.embedding_size)] for _ in range(len(words_vocab))]
         for word, word_ids in words_vocab.items():
             if word in embedding_dict:
                 embedding[word_ids] = embedding_dict[word]

@@ -29,7 +29,7 @@ class Predict(object):
 
         self.data_utils = DataUtils()
         self.tensorflow_utils = TensorflowUtils()
-        self.num_classes = self.data_utils.load_num_classes()
+        self.num_classes = self.data_utils.get_vocabulary_size(os.path.join(FLAGS.vocab_path, 'labels_vocab.txt'))
         self.sequence_labeling_model = SequenceLabelingModel()
         self.init_predict_graph()
 

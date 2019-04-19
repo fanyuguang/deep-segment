@@ -20,12 +20,12 @@ class SequenceLabelingModel(object):
         self.use_dynamic_rnn = FLAGS.use_dynamic_rnn
         self.use_bidirectional_rnn = FLAGS.use_bidirectional_rnn
 
-        self.vocab_size = FLAGS.vocab_size
         self.batch_size = FLAGS.batch_size
         self.num_steps = FLAGS.num_steps
         self.num_layers = FLAGS.num_layers
         self.embedding_size = FLAGS.embedding_size
-        self.hidden_size = FLAGS.hidden_size
+        # self.hidden_size = FLAGS.hidden_size
+        self.hidden_size = FLAGS.embedding_size
         self.keep_prob = FLAGS.keep_prob
 
         self.tensorflow_utils = TensorflowUtils()
@@ -42,7 +42,7 @@ class SequenceLabelingModel(object):
         """
         with tf.device('/cpu:0'):
             if self.use_stored_embedding:
-                embedding = self.tensorflow_utils.load_embedding(os.path.join(self.raw_data_path, 'char_embedding.txt'),
+                embedding = self.tensorflow_utils.load_embedding(os.path.join(self.raw_data_path, 'embedding.txt'),
                                                                  os.path.join(self.vocab_path, 'words_vocab.txt'))
             else:
                 embedding = tf.get_variable('embedding', [self.vocab_size, self.embedding_size],
