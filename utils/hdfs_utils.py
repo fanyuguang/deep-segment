@@ -96,3 +96,7 @@ class HdfsUtils(object):
         if self.hdfs.exists(hdfs_path):
             self.hdfs.rm(hdfs_path)
         print('Done.')
+
+
+    def hdfs_mv(self, source_hdfs_path, target_hdfs_path):
+        self.hdfs(source_hdfs_path, target_hdfs_path)

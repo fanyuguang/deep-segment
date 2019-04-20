@@ -17,7 +17,7 @@ tf.app.flags.DEFINE_string('saved_model_path', 'saved-model-data', 'Saved model 
 # training data process params
 tf.app.flags.DEFINE_string('default_label', 'WORD-S', 'Define the default label in the label_vocab')
 tf.app.flags.DEFINE_integer('vocab_drop_limit', 1, 'Drop the words that frequency is less than or equal to limit')
-tf.app.flags.DEFINE_float('test_percent', 0.0, 'The percentage of test for all data')
+tf.app.flags.DEFINE_float('test_percent', 0.1, 'The percentage of test for all data')
 
 # batch data generator params
 tf.app.flags.DEFINE_integer('batch_size', 64, 'Words batch size')

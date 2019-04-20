@@ -14,7 +14,7 @@ class Evaluate(object):
         self.data_utils = DataUtils()
 
 
-    def evaluate(self, data_filename):
+    def evaluate(self, data_filename, result_filename):
         """
         Evaluate the score of model predict, data_filename is created by file_predict
         :return:
@@ -67,6 +67,11 @@ class Evaluate(object):
             f_score = precision_score * recall_score * 2 / (precision_score + recall_score + min_num)
             label_scores[label] = [precision_score, recall_score, f_score]
             print(label + ': [precision: ' + str(precision_score) + ', recall: ' + str(recall_score) + ', f_score: ' + str(f_score) + ']')
+
+        with open(result_filename, encoding='utf-8', mode='w') as data_file:
+            for label, value in label_scores:
+                evaluate_result = '%d: [ precision: %f, recall: %f, f_score: %f]' % (label, value[0], value[1], value[2])
+                data_file.write(evaluate_result)
 
 
 def main(_):
