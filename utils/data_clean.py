@@ -31,15 +31,28 @@ def clean_path(path):
             delete_file(os.path.join(path, filename))
 
 
+def clean_checkpoint(path):
+    """
+    Delete all checkpoints under path
+    :param path:
+    :return:
+    """
+    filenames = os.listdir(path)
+    for filename in filenames:
+        if filename != '.gitignore' and filename != 'checkpoint':
+            delete_file(os.path.join(path, filename))
+
+
 def main():
     # clean generated files
-    delete_file(os.path.join('../', FLAGS.raw_data_path, 'format_data.txt'))
-    delete_file(os.path.join('../', FLAGS.raw_data_path, 'split_data.txt'))
+    # delete_file(os.path.join('../', FLAGS.raw_data_path, 'format_data.txt'))
+    # delete_file(os.path.join('../', FLAGS.raw_data_path, 'split_data.txt'))
 
-    paths = [FLAGS.datasets_path, FLAGS.vocab_path, FLAGS.tfrecords_path, FLAGS.checkpoint_path,
-             FLAGS.tensorboard_path, FLAGS.freeze_graph_path, FLAGS.saved_model_path]
-    for path in paths:
-        clean_path(os.path.join('../', path))
+    # paths = [FLAGS.datasets_path, FLAGS.vocab_path, FLAGS.tfrecords_path, FLAGS.checkpoint_path,
+    #          FLAGS.tensorboard_path, FLAGS.freeze_graph_path, FLAGS.saved_model_path]
+    # for path in paths:
+    #     clean_path(os.path.join('../', path))
+    clean_checkpoint(os.path.join('../', FLAGS.checkpoint_path))
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import datetime
 import os
 import pytz
 import tensorflow as tf
+import utils.data_clean as data_clean
 
 from config import FLAGS
 from utils.data_utils import DataUtils
@@ -66,10 +67,10 @@ class Train(object):
         test_batch_labels = tf.to_int64(test_batch_labels)
         if self.use_crf:
             accuracy = self.sequence_labeling_model.crf_accuracy(accuracy_logits, test_batch_labels, test_batch_features_lengths,
-                                                   transition_params, self.num_classes)
+                                                                 transition_params, self.num_classes)
         else:
             slice_accuracy_logits, slice_test_batch_labels = self.sequence_labeling_model.slice_seq(accuracy_logits, test_batch_labels,
-                                                                                          test_batch_features_lengths)
+                                                                                                    test_batch_features_lengths)
             accuracy = self.sequence_labeling_model.accuracy(slice_accuracy_logits, slice_test_batch_labels)
 
         # summary
@@ -114,6 +115,7 @@ class Train(object):
                         print('[{}] Step: {}, loss: {}, accuracy: {}, lr: {}'.format(current_time, step, loss_value, accuracy_value, lr_value))
                         if accuracy_value > max_accuracy and loss_value < min_loss:
                             writer.add_summary(summary_value, step)
+                            data_clean.clean_checkpoint(self.checkpoint_path)
                             saver.save(sess, checkpoint_filename, global_step=step)
                             print('save model to %s-%d' % (checkpoint_filename, step))
                             max_accuracy = accuracy_value
