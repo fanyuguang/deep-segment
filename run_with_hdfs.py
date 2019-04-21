@@ -27,6 +27,7 @@ tf.app.flags.DEFINE_string('hdfs_user', 'hadoop', 'hdfs user')
 tf.app.flags.DEFINE_string('input_path', '/user/hadoop/fanyuguang/input/', 'input data path')
 tf.app.flags.DEFINE_string('output_path', '/user/hadoop/fanyuguang/output/', 'output data path')
 
+
 def update_config(config_path):
     try:
         with open(config_path, encoding='utf-8', mode='r') as data_file:
@@ -59,35 +60,45 @@ def update_config(config_path):
         raise Exception('ERROR: config.json content invalid')
 
 
-def upload_data(hdfs_client, flags):
-    predict = Predict()
-    predict.saved_model_pb()
-
-    hdfs_tensorboard_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.tensorboard_path)))
-    hdfs_checkpoint_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.checkpoint_path)))
-    hdfs_saved_model_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.saved_model_path)))
-
-    temp_hdfs_tensorboard_path = hdfs_tensorboard_path + '-temp'
-    temp_hdfs_checkpoint_path = hdfs_checkpoint_path + '-temp'
-    temp_hdfs_saved_model_path = hdfs_saved_model_path + '-temp'
-
-    hdfs_client.hdfs_upload(flags.tensorboard_path, temp_hdfs_tensorboard_path)
-    hdfs_client.hdfs_upload(flags.checkpoint_path, temp_hdfs_checkpoint_path)
-    hdfs_client.hdfs_upload(flags.saved_model_path, temp_hdfs_saved_model_path)
-
-    hdfs_client.hdfs_delete(hdfs_tensorboard_path)
-    hdfs_client.hdfs_delete(hdfs_checkpoint_path)
-    hdfs_client.hdfs_delete(hdfs_saved_model_path)
-
-    hdfs_client.hdfs_mv(temp_hdfs_tensorboard_path, hdfs_tensorboard_path)
-    hdfs_client.hdfs_mv(temp_hdfs_checkpoint_path, hdfs_checkpoint_path)
-    hdfs_client.hdfs_mv(temp_hdfs_saved_model_path, hdfs_saved_model_path)
+class TrainMonitor(object):
+    def __init__(self):
+        self.train_is_alive = False
+        self.train = Train()
+        self.predict = Predict()
 
 
-def model_monitor(hdfs_client, flags):
-    while(True):
-        time.sleep(120)
-        upload_data(hdfs_client, flags)
+    def train(self):
+        self.train.train()
+
+
+    def upload_log_model_data(self, hdfs_client, flags):
+        self.predict.saved_model_pb()
+
+        hdfs_tensorboard_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.tensorboard_path)))
+        hdfs_checkpoint_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.checkpoint_path)))
+        hdfs_saved_model_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.saved_model_path)))
+
+        temp_hdfs_tensorboard_path = hdfs_tensorboard_path + '-temp'
+        temp_hdfs_checkpoint_path = hdfs_checkpoint_path + '-temp'
+        temp_hdfs_saved_model_path = hdfs_saved_model_path + '-temp'
+
+        hdfs_client.hdfs_upload(flags.tensorboard_path, temp_hdfs_tensorboard_path)
+        hdfs_client.hdfs_upload(flags.checkpoint_path, temp_hdfs_checkpoint_path)
+        hdfs_client.hdfs_upload(flags.saved_model_path, temp_hdfs_saved_model_path)
+
+        hdfs_client.hdfs_delete(hdfs_tensorboard_path)
+        hdfs_client.hdfs_delete(hdfs_checkpoint_path)
+        hdfs_client.hdfs_delete(hdfs_saved_model_path)
+
+        hdfs_client.hdfs_mv(temp_hdfs_tensorboard_path, hdfs_tensorboard_path)
+        hdfs_client.hdfs_mv(temp_hdfs_checkpoint_path, hdfs_checkpoint_path)
+        hdfs_client.hdfs_mv(temp_hdfs_saved_model_path, hdfs_saved_model_path)
+
+
+    def upload(self, hdfs_client, flags):
+        while(self.train_is_alive):
+            time.sleep(120)
+            self.upload_log_model_data(hdfs_client, flags)
 
 
 def main():
@@ -120,13 +131,13 @@ def main():
         hdfs_client.hdfs_upload(FLAGS.vocab_path, os.path.join(FLAGS.output_path, os.path.basename(FLAGS.vocab_path)))
 
         threads = []
-        segment_train = Train()
-        threads.append(threading.Thread(target=segment_train.train))
-        threads.append(threading.Thread(target=model_monitor, args=(data_utils, FLAGS)))
+        train_monitor = TrainMonitor()
+        threads.append(threading.Thread(target=train_monitor.train))
+        threads.append(threading.Thread(target=train_monitor.predict, args=(data_utils, FLAGS)))
         for thread in threads:
             thread.start()
         thread.join()
-        upload_data(hdfs_client, FLAGS)
+        train_monitor.upload_log_model_data(hdfs_client, FLAGS)
     elif FLAGS.train_evaluate == 'evaluate':
         shutil.rmtree(FLAGS.vocab_path)
         shutil.rmtree(FLAGS.checkpoint_path)

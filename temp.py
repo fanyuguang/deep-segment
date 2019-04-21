@@ -4,28 +4,45 @@ import threading
 
 start = time.clock()
 
+class Worker():
+    def __init__(self):
+        self.train_is_alive = 0
 
-def worker(m):
-    print('worker', m)
-    time.sleep(1)
-    return
+
+    def worker1(self, info):
+        print('Start ' + info)
+        self.train_is_alive = 1
+        time.sleep(10)
+        self.train_is_alive = 0
+        return
+
+
+    def worker2(self, info):
+        print('Start ' + info)
+        while(self.train_is_alive == 1):
+            print('Train is alive')
+            time.sleep(1)
+        print('Train is not alive')
+        return
 
 
 if __name__ == "__main__":
     threads = []
-    for i in range(5):
-        threads.append(threading.Thread(target=worker, args=(i,)))
+    worker = Worker()
+    threads.append(threading.Thread(target=worker.worker1, args=('worker1',)))
+    threads.append(threading.Thread(target=worker.worker2, args=('worker2',)))
+    print('threads1 isAlive:', threads[0].is_alive())
+    print('threads2 isAlive:', threads[0].is_alive())
     for t in threads:
         t.start()
-        # t.join()  #阻塞子线程
+    print('threads1 isAlive:', threads[0].is_alive())
+    print('threads2 isAlive:', threads[0].is_alive())
 
-    t.join()   #阻塞父线程
+    t.join()
 
     end = time.clock()
     print("finished: %.3fs" % (end - start))
 
-import os
-tensorboard_path = 'tensorboard/'
-output_path = '/data/fanyuguang'
-a = os.path.join(output_path, os.path.basename(os.path.normpath(tensorboard_path)))
-print(a)
+    time.sleep(1)
+    print('threads1 isAlive:', threads[0].is_alive())
+    print('threads2 isAlive:', threads[0].is_alive())
