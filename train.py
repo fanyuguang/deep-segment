@@ -129,27 +129,27 @@ class Train(object):
 
 
 def main(_):
-    data_utils = DataUtils()
-    data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.test_percent,
-                                os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'test.txt'))
-
-    data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'label_train.txt'))
-    data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'label_test.txt'))
-
-    data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_train.txt'), os.path.join(FLAGS.datasets_path, 'split_train.txt'))
-    data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_test.txt'), os.path.join(FLAGS.datasets_path, 'split_test.txt'))
-
-    words_vocab, labels_vocab = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'split_train.txt'), FLAGS.vocab_path, FLAGS.vocab_drop_limit)
-
-    train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_train.txt'), words_vocab, labels_vocab)
-    test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_test.txt'), words_vocab, labels_vocab)
-
-    tensorflow_utils = TensorflowUtils()
-    tensorflow_utils.create_record(train_word_ids_list, train_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
-    tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
-
-    tensorflow_utils.print_all(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
-    # tensorflow_utils.print_shuffle(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
+    # data_utils = DataUtils()
+    # data_utils.prepare_datasets(os.path.join(FLAGS.raw_data_path, 'data_demo.txt'), FLAGS.test_percent,
+    #                             os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'test.txt'))
+    #
+    # data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'train.txt'), os.path.join(FLAGS.datasets_path, 'label_train.txt'))
+    # data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'label_test.txt'))
+    #
+    # data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_train.txt'), os.path.join(FLAGS.datasets_path, 'split_train.txt'))
+    # data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_test.txt'), os.path.join(FLAGS.datasets_path, 'split_test.txt'))
+    #
+    # words_vocab, labels_vocab = data_utils.create_vocabulary(os.path.join(FLAGS.datasets_path, 'split_train.txt'), FLAGS.vocab_path, FLAGS.vocab_drop_limit)
+    #
+    # train_word_ids_list, train_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_train.txt'), words_vocab, labels_vocab)
+    # test_word_ids_list, test_label_ids_list = data_utils.file_to_word_ids(os.path.join(FLAGS.datasets_path, 'split_test.txt'), words_vocab, labels_vocab)
+    #
+    # tensorflow_utils = TensorflowUtils()
+    # tensorflow_utils.create_record(train_word_ids_list, train_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
+    # tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
+    #
+    # tensorflow_utils.print_all(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
+    # # tensorflow_utils.print_shuffle(os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
 
     segment_train = Train()
     segment_train.train()

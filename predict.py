@@ -248,9 +248,9 @@ def main(_):
     # print(predict_scores)
     #
     # predict.freeze_graph()
-    # predict.saved_model_pb()
+    predict.saved_model_pb()
 
-    predict.file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
+    # predict.file_predict(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test_predict.txt'))
 
 
 if __name__ == '__main__':

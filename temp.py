@@ -23,3 +23,9 @@ if __name__ == "__main__":
 
     end = time.clock()
     print("finished: %.3fs" % (end - start))
+
+import os
+tensorboard_path = 'tensorboard/'
+output_path = '/data/fanyuguang'
+a = os.path.join(output_path, os.path.basename(os.path.normpath(tensorboard_path)))
+print(a)

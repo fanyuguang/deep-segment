@@ -69,9 +69,9 @@ class Evaluate(object):
             print(label + ': [precision: ' + str(precision_score) + ', recall: ' + str(recall_score) + ', f_score: ' + str(f_score) + ']')
 
         with open(result_filename, encoding='utf-8', mode='w') as data_file:
-            for label, value in label_scores:
-                evaluate_result = '%d: [ precision: %f, recall: %f, f_score: %f]' % (label, value[0], value[1], value[2])
-                data_file.write(evaluate_result)
+            for label, value in label_scores.items():
+                evaluate_result = 'Precision: %f\nRecall: %f\nF_score: %f' % (value[0], value[1], value[2])
+                data_file.write(evaluate_result + '\n')
 
 
 def main(_):

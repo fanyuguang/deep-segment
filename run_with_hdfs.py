@@ -3,6 +3,7 @@
 
 import os
 import json
+import shutil
 import threading
 import time
 import tensorflow as tf
@@ -15,18 +16,16 @@ from utils.data_utils import DataUtils
 from utils.hdfs_utils import HdfsUtils
 from utils.tensorflow_utils import TensorflowUtils
 
-tf.app.flags.DEFINE_string('train_evaluate', 'train', 'train or evaluate')
+tf.app.flags.DEFINE_string('train_evaluate', 'evaluate', 'train or evaluate')
 
 tf.app.flags.DEFINE_string('hdfs_host', 'hdfs-bizaistca.corp.microsoft.com', 'hdfs host')
 tf.app.flags.DEFINE_integer('hdfs_port', 8020, 'hdfs port')
 tf.app.flags.DEFINE_string('hdfs_user', 'hadoop', 'hdfs user')
 
 # tf.app.flags.DEFINE_string('input_path', '/user/hadoop/data/input/', 'input data path')
-# tf.app.flags.DEFINE_string('log_path', '/user/hadoop/data/log/', 'log data path')
-# tf.app.flags.DEFINE_string('model_path', '/user/hadoop/data/model/', 'export model data path')
+# tf.app.flags.DEFINE_string('output_path', '/user/hadoop/data/output_path/', 'output_path data path')
 tf.app.flags.DEFINE_string('input_path', '/user/hadoop/fanyuguang/input/', 'input data path')
-tf.app.flags.DEFINE_string('log_path', '/user/hadoop/fanyuguang/log/', 'log data path')
-tf.app.flags.DEFINE_string('model_path', '/user/hadoop/fanyuguang/model/', 'export model data path')
+tf.app.flags.DEFINE_string('output_path', '/user/hadoop/fanyuguang/output/', 'output data path')
 
 def update_config(config_path):
     try:
@@ -64,22 +63,25 @@ def upload_data(hdfs_client, flags):
     predict = Predict()
     predict.saved_model_pb()
 
-    temp_log_path = os.path.normpath(flags.log_path) + '-temp'
-    checkpoint_path = os.path.join(FLAGS.input_path, os.path.basename(FLAGS.checkpoint_path))
-    temp_checkpoint_path = os.path.normpath(checkpoint_path) + '-temp'
-    temp_model_path = os.path.normpath(flags.model_path) + '-temp'
+    hdfs_tensorboard_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.tensorboard_path)))
+    hdfs_checkpoint_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.checkpoint_path)))
+    hdfs_saved_model_path = os.path.join(FLAGS.output_path, os.path.basename(os.path.normpath(flags.saved_model_path)))
 
-    hdfs_client.hdfs_upload(flags.tensorboard_path, temp_log_path)
-    hdfs_client.hdfs_upload(flags.checkpoint_path, temp_checkpoint_path)
-    hdfs_client.hdfs_upload(flags.saved_model_path, temp_model_path)
+    temp_hdfs_tensorboard_path = hdfs_tensorboard_path + '-temp'
+    temp_hdfs_checkpoint_path = hdfs_checkpoint_path + '-temp'
+    temp_hdfs_saved_model_path = hdfs_saved_model_path + '-temp'
 
-    hdfs_client.hdfs_delete(flags.log_path)
-    hdfs_client.hdfs_delete(checkpoint_path)
-    hdfs_client.hdfs_delete(flags.model_path)
+    hdfs_client.hdfs_upload(flags.tensorboard_path, temp_hdfs_tensorboard_path)
+    hdfs_client.hdfs_upload(flags.checkpoint_path, temp_hdfs_checkpoint_path)
+    hdfs_client.hdfs_upload(flags.saved_model_path, temp_hdfs_saved_model_path)
 
-    hdfs_client.hdfs_mv(temp_log_path, flags.log_path)
-    hdfs_client.hdfs_mv(temp_checkpoint_path, checkpoint_path)
-    hdfs_client.hdfs_mv(temp_model_path, flags.model_path)
+    hdfs_client.hdfs_delete(hdfs_tensorboard_path)
+    hdfs_client.hdfs_delete(hdfs_checkpoint_path)
+    hdfs_client.hdfs_delete(hdfs_saved_model_path)
+
+    hdfs_client.hdfs_mv(temp_hdfs_tensorboard_path, hdfs_tensorboard_path)
+    hdfs_client.hdfs_mv(temp_hdfs_checkpoint_path, hdfs_checkpoint_path)
+    hdfs_client.hdfs_mv(temp_hdfs_saved_model_path, hdfs_saved_model_path)
 
 
 def model_monitor(hdfs_client, flags):
@@ -115,7 +117,7 @@ def main():
         tensorflow_utils.create_record(train_word_ids_list, train_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'train.tfrecords'))
         tensorflow_utils.create_record(test_word_ids_list, test_label_ids_list, os.path.join(FLAGS.tfrecords_path, 'test.tfrecords'))
 
-        hdfs_client.hdfs_upload(FLAGS.vocab_path, os.path.join(FLAGS.input_path, os.path.basename(FLAGS.vocab_path)))
+        hdfs_client.hdfs_upload(FLAGS.vocab_path, os.path.join(FLAGS.output_path, os.path.basename(FLAGS.vocab_path)))
 
         threads = []
         segment_train = Train()
@@ -125,9 +127,14 @@ def main():
             thread.start()
         thread.join()
         upload_data(hdfs_client, FLAGS)
-    elif FLAGS.train_evaluate_export == 'evaluate':
+    elif FLAGS.train_evaluate == 'evaluate':
+        shutil.rmtree(FLAGS.vocab_path)
+        shutil.rmtree(FLAGS.checkpoint_path)
+
         hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, os.path.basename(FLAGS.vocab_path)), FLAGS.vocab_path)
         hdfs_client.hdfs_download(os.path.join(FLAGS.input_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'test.txt'))
+        hdfs_checkpoint_path = os.path.join(FLAGS.input_path, os.path.basename(FLAGS.checkpoint_path))
+        hdfs_client.hdfs_download(hdfs_checkpoint_path, FLAGS.checkpoint_path)
 
         data_utils.label_segment_file(os.path.join(FLAGS.datasets_path, 'test.txt'), os.path.join(FLAGS.datasets_path, 'label_test.txt'))
         data_utils.split_label_file(os.path.join(FLAGS.datasets_path, 'label_test.txt'), os.path.join(FLAGS.datasets_path, 'split_test.txt'))
@@ -138,8 +145,9 @@ def main():
         evaluate = Evaluate()
         evaluate.evaluate(os.path.join(FLAGS.datasets_path, 'test_predict.txt'), os.path.join(FLAGS.datasets_path, 'test_evaluate.txt'))
 
-        hdfs_client.hdfs_delete(os.path.join(FLAGS.input_path, 'test_evaluate.txt'))
+        hdfs_client.hdfs_delete(os.path.join(FLAGS.output_path, 'test_evaluate.txt'))
         hdfs_client.hdfs_upload(os.path.join(FLAGS.datasets_path, 'test_evaluate.txt'), os.path.join(FLAGS.input_path, 'test_evaluate.txt'))
+
 
 if __name__ == '__main__':
     main()

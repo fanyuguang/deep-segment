@@ -175,12 +175,13 @@ class DataUtils(object):
         merge_label_list = []
         category = ''
         category_word_list = []
+        self.default_segment_label = 'WORD'
         for (word, label) in zip(word_list, label_list):
             if word and label:
                 if len(label) > 1 and label.find('-B') == len(label) - 2:
                     if category_word_list:
                         merge_word_list.extend(category_word_list)
-                        merge_label_list.extend([self.default_label] * len(category_word_list))
+                        merge_label_list.extend([self.default_segment_label] * len(category_word_list))
                         category_word_list = []
                     category = label[0:-2]
                     category_word_list.append(word)
@@ -188,7 +189,7 @@ class DataUtils(object):
                     category_word_list.append(word)
                     if category != label[0:-2]:
                         merge_word_list.extend(category_word_list)
-                        merge_label_list.extend([self.default_label] * len(category_word_list))
+                        merge_label_list.extend([self.default_segment_label] * len(category_word_list))
                         category = ''
                         category_word_list = []
                 elif len(label) > 1 and label.find('-E') == len(label) - 2:
@@ -198,13 +199,13 @@ class DataUtils(object):
                         merge_label_list.append(category)
                     else:
                         merge_word_list.extend(category_word_list)
-                        merge_label_list.extend([self.default_label] * len(category_word_list))
+                        merge_label_list.extend([self.default_segment_label] * len(category_word_list))
                     category = ''
                     category_word_list = []
                 elif len(label) > 1 and label.find('-S') == len(label) - 2:
                     if category_word_list:
                         merge_word_list.extend(category_word_list)
-                        merge_label_list.extend([self.default_label] * len(category_word_list))
+                        merge_label_list.extend([self.default_segment_label] * len(category_word_list))
                         category_word_list = []
                     category = label[0:-2]
                     merge_word_list.append(word)
@@ -213,7 +214,7 @@ class DataUtils(object):
                 elif label == self.default_label:
                     category_word_list.append(word)
                     merge_word_list.extend(category_word_list)
-                    merge_label_list.extend([self.default_label] * len(category_word_list))
+                    merge_label_list.extend([self.default_segment_label] * len(category_word_list))
                     category = ''
                     category_word_list = []
                 else:
